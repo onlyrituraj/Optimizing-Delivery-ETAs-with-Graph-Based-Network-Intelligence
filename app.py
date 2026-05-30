@@ -4,6 +4,7 @@ Run: streamlit run app.py
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import networkx as nx
@@ -12,6 +13,8 @@ import plotly.express as px
 from datetime import datetime
 import time
 import random
+import os
+import pathlib
 
 # ── Page config ───────────────────────────────────────────────
 st.set_page_config(
@@ -253,6 +256,7 @@ with st.sidebar:
 
     page = st.radio("Navigate", [
         "🌐 Live Network",
+        "🕸 Interactive Graph",
         "🔥 Bottleneck Hubs",
         "📊 ETA Model",
         "🚛 FTL vs Carting",
@@ -341,7 +345,105 @@ if page == "🌐 Live Network":
 
 
 # ═══════════════════════════════════════════════════════════════
-# PAGE 2 — BOTTLENECK HUBS
+# PAGE 2 — INTERACTIVE GRAPH (PyVis HTML)
+# ═══════════════════════════════════════════════════════════════
+elif page == "🕸 Interactive Graph":
+    st.markdown("## 🕸 Interactive Network Graph")
+    st.markdown(
+        "Pan, zoom, and hover over any **node** (hub) or **edge** (corridor) "
+        "to see delay ratio, SLA contribution, and recommended intervention. "
+        "Drag nodes to rearrange."
+    )
+
+    # ── Legend ────────────────────────────────────────────────
+    st.markdown("""
+<div style='display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px'>
+  <span style='background:#E8354A22;color:#E8354A;border:1px solid #E8354A55;
+  padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600'>
+  ● Critical hub</span>
+  <span style='background:#F5A62322;color:#F5A623;border:1px solid #F5A62355;
+  padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600'>
+  ● High hub</span>
+  <span style='background:#4A90D922;color:#4A90D9;border:1px solid #4A90D955;
+  padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600'>
+  ● Medium hub</span>
+  <span style='background:#E8354A22;color:#E8354A;border:1px solid #E8354A55;
+  padding:4px 12px;border-radius:12px;font-size:12px'>
+  ─ Scheduling fix</span>
+  <span style='background:#F5A62322;color:#F5A623;border:1px solid #F5A62355;
+  padding:4px 12px;border-radius:12px;font-size:12px'>
+  ─ Facility upgrade</span>
+  <span style='background:#7B68EE22;color:#7B68EE;border:1px solid #7B68EE55;
+  padding:4px 12px;border-radius:12px;font-size:12px'>
+  ─ Route type shift</span>
+  <span style='background:#21262D;color:#8B949E;border:1px solid #30363D;
+  padding:4px 12px;border-radius:12px;font-size:12px'>
+  ─ Monitor</span>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── Load and render HTML ───────────────────────────────────
+    html_file = pathlib.Path("network_interactive.html")
+
+    if html_file.exists():
+        html_content = html_file.read_text(encoding="utf-8")
+
+        # Patch background to match dark dashboard theme
+        html_content = html_content.replace(
+            "background-color: #0D1117;",
+            "background-color: #0D1117;"
+        ).replace(
+            "<body>",
+            """<body style='background:#0D1117;margin:0;padding:0'>"""
+        )
+
+        components.html(html_content, height=760, scrolling=False)
+
+        # ── Quick-access hub stats below the graph ─────────────
+        st.markdown("---")
+        st.markdown("#### Hover tooltip guide")
+        c1, c2, c3 = st.columns(3)
+        c1.markdown("""
+**On a node (hub):**
+- Hub ID
+- SLA breach contribution %
+- Live delay ratio
+- Risk score / 100
+- Severity level
+- Recommended action
+""")
+        c2.markdown("""
+**On an edge (corridor):**
+- Source → Destination
+- Median delay ratio
+- SLA contribution %
+- Intervention type
+- Chronic: Yes / No
+""")
+        c3.markdown("""
+**Controls:**
+- 🖱 Scroll to zoom
+- 🖱 Click + drag to pan
+- 🖱 Drag node to reposition
+- 🖱 Hover for tooltip
+- Double-click node to focus
+""")
+
+    else:
+        st.error(
+            "**network_interactive.html not found in repo root.**\n\n"
+            "Upload `network_interactive.html` to your GitHub repo root "
+            "(same folder as `app.py`) and reboot the app."
+        )
+        st.info(
+            "**How to generate it:** Run the network visualization Cell 6 "
+            "in your Colab notebook — it saves `network_interactive.html`. "
+            "Then add it to your GitHub repo."
+        )
+
+
+# ═══════════════════════════════════════════════════════════════
+# PAGE 3 — BOTTLENECK HUBS
 # ═══════════════════════════════════════════════════════════════
 elif page == "🔥 Bottleneck Hubs":
     st.markdown("## 🔥 Bottleneck Hub Analysis")
@@ -427,7 +529,7 @@ border-radius:8px;padding:14px 18px;margin-bottom:10px'>
 
 
 # ═══════════════════════════════════════════════════════════════
-# PAGE 3 — ETA MODEL
+# PAGE 4 — ETA MODEL
 # ═══════════════════════════════════════════════════════════════
 elif page == "📊 ETA Model":
     st.markdown("## 📊 ETA Prediction — Model Benchmark")
@@ -511,7 +613,7 @@ elif page == "📊 ETA Model":
 
 
 # ═══════════════════════════════════════════════════════════════
-# PAGE 4 — FTL VS CARTING
+# PAGE 5 — FTL VS CARTING
 # ═══════════════════════════════════════════════════════════════
 elif page == "🚛 FTL vs Carting":
     st.markdown("## 🚛 FTL vs Carting Decision Framework")
@@ -590,7 +692,7 @@ padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600'>{rec}</span>
 
 
 # ═══════════════════════════════════════════════════════════════
-# PAGE 5 — CORRIDOR AUDIT
+# PAGE 6 — CORRIDOR AUDIT
 # ═══════════════════════════════════════════════════════════════
 elif page == "📋 Corridor Audit":
     st.markdown("## 📋 Corridor Audit Table")
